@@ -1,0 +1,13 @@
+{
+  "name": "@fortgate/id-sdk",
+  "version": "1.0.0-alpha.1",
+  "description": "Fortgate ID SDK for Web and Node.js",
+  "main": "tests/smoke_test.js",
+  "scripts": {
+    "test": "node tests/smoke_test.js",
+    "build:wasm": "wasm-pack build ../open/client-sdk --target nodejs --out-dir ../../sdk-ts/pkg"
+  },
+  "dependencies": {
+    "ffi-napi": "^4.0.3"
+  }
+}

@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  rust-core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          components: rustfmt, clippy
+      - name: Test fortgate-id-core
+        run: cd open/client-sdk && cargo test
+      - name: Clippy
+        run: cd open/client-sdk && cargo clippy -- -D warnings
+
+  sp1-guest-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.88.0
+      - name: Check SP1 guest crate
+        run: cd open/client-sdk/sp1-prover && cargo check -p fortgate-id-program
+      - name: Check SP1 host script (ELF placeholder, sin toolchain succinct)
+        env:
+          SP1_SKIP_PROGRAM_BUILD: "true"
+        run: cd open/client-sdk/sp1-prover && cargo check -p fortgate-id-script
+
+  noir-proto:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Nargo check (optional)
+        run: |
+          if command -v nargo >/dev/null 2>&1; then
+            cd open/proto && nargo check
+          else
+            echo "Install Nargo from https://noir-lang.org/docs/getting_started/installation"
+            exit 0
+          fi

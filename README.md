@@ -35,6 +35,8 @@ Cada perfil tiene secciones dedicadas más abajo.
   - `tests/`: pruebas relacionadas con criptografía/firmas (por ejemplo, fixtures de OpenSSL).
 - `sdk-ts/`
   - SDK TypeScript para integrarse desde aplicaciones y servicios que consumen Fortgate ID.
+- `enterprise/`
+  - Prototipos y piezas comerciales acopladas al core open source; modelo de integración en [`enterprise/docs/INTEGRATION_MODEL.md`](enterprise/docs/INTEGRATION_MODEL.md).
 
 > Tip: para entender la película completa, leer primero el whitepaper (`WHITEPAPER_ES_MX` o `WHITEPAPER_EN_US`), luego el plan de implementación y finalmente el manual de integración SP1.
 

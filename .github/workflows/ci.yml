@@ -30,16 +30,59 @@ jobs:
           SP1_SKIP_PROGRAM_BUILD: "true"
         run: cd open/client-sdk/sp1-prover && cargo check -p fortgate-id-script
 
-  noir-proto:
+  sdk-ts-wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.88.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --locked
+      - name: Build WASM and smoke test
+        run: cd sdk-ts && npm install && npm run build:wasm && npm test
+
+  noir-poseidon-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Noir 0.31 (noirup)
+        run: |
+          curl -L https://raw.githubusercontent.com/noir-lang/noirup/main/install | bash
+          echo "$HOME/.nargo/bin" >> "$GITHUB_PATH"
+      - name: nargo test (proto-poseidon-check)
+        run: |
+          export PATH="$HOME/.nargo/bin:$PATH"
+          noirup --version 0.31.0
+          cd open/proto-poseidon-check && nargo test
+
+  noir-proto-legacy:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
-      - name: Nargo check (optional)
+      - name: Nargo check open/proto (formato legacy; opcional)
         run: |
           if command -v nargo >/dev/null 2>&1; then
-            cd open/proto && nargo check
+            cd open/proto && nargo check || true
           else
-            echo "Install Nargo from https://noir-lang.org/docs/getting_started/installation"
+            echo "nargo not in PATH"
+            exit 0
+          fi
+
+  uniffi-bindgen-smoke:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.88.0
+      - name: Generate Kotlin/Swift stubs if uniffi-bindgen is preinstalled
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          if command -v uniffi-bindgen >/dev/null 2>&1; then
+            bash scripts/generate_uniffi_bindings.sh
+          else
+            echo "uniffi-bindgen not in PATH; install with: cargo install uniffi_bindgen --version 0.28.3 --locked"
             exit 0
           fi

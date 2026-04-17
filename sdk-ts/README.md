@@ -13,7 +13,7 @@ Desde la raíz del repo o desde `sdk-ts`:
 npm run build:wasm
 ```
 
-Esto genera `sdk-ts/pkg/` con el export `create_fortgate_witness_wasm` (definido en `open/client-sdk/src/wasm.rs`).
+Esto genera `sdk-ts/pkg/` con el export `create_fortgate_witness_wasm` (definido en `open/client-sdk/src/wasm.rs`). Los errores `FortgateError` se exponen como strings estables (`ParseError`, `InvalidAlgorithm`, `RfcNotFound`, `CryptoError`), no como `Debug` de Rust.
 
 ## Prueba
 

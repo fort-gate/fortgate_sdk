@@ -2,6 +2,9 @@
 name = "fortgate-id-core"
 version = "0.1.0"
 edition = "2021"
+license = "Apache-2.0"
+description = "Fortgate ID core: e.firma parsing, Poseidon commitments, blinded witness, WASM/UniFFI"
+repository = "https://github.com/fort-gate/fortgate_sdk"
 build = "build.rs"
 
 [dependencies]

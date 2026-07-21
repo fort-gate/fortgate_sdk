@@ -4,6 +4,8 @@ SDK open source de **KYC con Zero-Knowledge Proofs**: convierte una e.firma (cer
 
 Licencia: [Apache-2.0](LICENSE).
 
+**¿Quieres contribuir?** Lee [CONTRIBUTING.md](CONTRIBUTING.md): cómo clonar, instalar toolchains y correr las mismas pruebas que CI.
+
 ## Qué incluye
 
 | Ruta | Contenido |
@@ -40,30 +42,24 @@ Desarrollo local (repos hermanos):
 fortgate-id-core = { path = "../fortgate_sdk/open/client-sdk" }
 ```
 
-## Desarrollo
+## Desarrollo (resumen)
 
-Toolchain: Rust **1.88.0** (`rust-toolchain.toml`).
+Toolchain: Rust **1.88.0** (`rust-toolchain.toml`). Guía completa: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ```bash
-# Core
+# Core (mínimo para la mayoría de PRs)
 cd open/client-sdk && cargo test && cargo clippy -- -D warnings
 
-# SP1 (sin toolchain Succinct completo)
+# SP1 check sin toolchain Succinct
 cd open/client-sdk/sp1-prover
 cargo check -p fortgate-id-program
 SP1_SKIP_PROGRAM_BUILD=true cargo check -p fortgate-id-script
 
-# TypeScript / WASM
+# TypeScript / WASM (requiere mock.der; ver CONTRIBUTING)
 cd sdk-ts && npm install && npm run build:wasm && npm test
 
-# Noir Poseidon smoke
+# Noir Poseidon smoke (nargo 0.31.x)
 cd open/proto-poseidon-check && nargo test
 ```
 
 Scripts: `scripts/build_open.sh`, `scripts/generate_uniffi_bindings.sh`, `scripts/verify_sp1_local.sh`.
-
-## Remoto
-
-```bash
-git remote add origin git@github.com:fort-gate/fortgate_sdk.git
-```

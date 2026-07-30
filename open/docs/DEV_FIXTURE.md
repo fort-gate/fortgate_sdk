@@ -1,18 +1,22 @@
-# Dev fixture: OpenSSL DER → `create_fortgate_witness`
+# Development DER fixture and witness smoke flow
 
-End-to-end **happy path** for a clean machine: generate a synthetic RSA-2048 X.509 cert with OpenSSL, then produce a blinded witness via the Rust core.
+This guide walks a clean development machine from a throwaway OpenSSL
+certificate to the Rust `create_fortgate_witness` smoke path.
 
-This is for **local development / smoke only**. Do not use real e.firma private keys.
+The same OpenSSL fixture flow is mentioned in
+[`sdk-ts/README.md`](../../sdk-ts/README.md). This page keeps the Rust core path
+in one place and links the parser checks that make the fixture valid.
 
 ## Prerequisites
 
-- OpenSSL (`openssl version`)
-- Rust toolchain from repo root `rust-toolchain.toml` (1.88.0)
-- Clone of this repo
+- OpenSSL on `PATH`.
+- Rust 1.88.0 from the repository `rust-toolchain.toml`.
+- The repository root as the current working directory.
 
-## 1. Generate `mock.der`
+## Generate `mock.der`
 
-From the **repository root**:
+Create a self-signed RSA-2048 certificate with an RFC-like test identifier in the
+OpenSSL `uniqueIdentifier` subject attribute:
 
 ```bash
 mkdir -p sdk-ts/tests/fixtures
@@ -21,40 +25,83 @@ openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/fg.key \
   -subj "/uniqueIdentifier=TESTRFC12345678901"
 ```
 
-Notes:
+Expected output:
 
-- Key size **must** be RSA-2048 (parser rejects other sizes).
-- Subject value is a stand-in RFC string; change it if you need another fixture value.
-- Private key `/tmp/fg.key` is only needed to mint the self-signed cert — the SDK path below consumes the **public DER only**.
-- A committed fixture already lives at `sdk-ts/tests/fixtures/mock.der` if you prefer not to regenerate.
+- `/tmp/fg.key` contains the throwaway private key.
+- `sdk-ts/tests/fixtures/mock.der` contains the DER certificate consumed by the
+  Rust and TypeScript smoke tests.
 
-Same OpenSSL recipe is documented in [`sdk-ts/README.md`](../../sdk-ts/README.md) and [`CONTRIBUTING.md`](../../CONTRIBUTING.md).
+Do not commit real keys, real certificates, or production identity data. The
+fixture above is only for local development and CI-style smoke checks.
 
-## 2. Accepted RFC subject OIDs (where enforced)
+## Accepted RFC subject attributes
 
-The parser extracts the RFC / identifier from the certificate **subject DN**. Supported OIDs are defined in [`open/client-sdk/src/cert_parser.rs`](../client-sdk/src/cert_parser.rs):
+The Rust parser scans the certificate subject in
+[`open/client-sdk/src/cert_parser.rs`](../client-sdk/src/cert_parser.rs). It
+accepts the RFC value from these OIDs:
 
-| OID | Meaning | How you get it |
-|-----|---------|----------------|
-| `2.5.4.45` | X.509 uniqueIdentifier (SAT e.firma style) | Real / SAT-like certs |
-| `0.9.2342.19200300.100.1.1` | `uid` (RFC 4519) | OpenSSL `-subj "/uid=..."` |
-| `0.9.2342.19200300.100.1.44` | OpenSSL `uniqueIdentifier` short name | OpenSSL `-subj "/uniqueIdentifier=..."` (command above) |
+| Subject form | OID | Code constant |
+| --- | --- | --- |
+| SAT e.firma unique identifier | `2.5.4.45` | `OID_X509_UNIQUE_IDENTIFIER` |
+| OpenSSL `uid=` / RFC 4519 userid | `0.9.2342.19200300.100.1.1` | `OID_USERID` |
+| OpenSSL `-subj "/uniqueIdentifier=..."` fixture form | `0.9.2342.19200300.100.1.44` | `OID_OPENSSL_SUBJ_UNIQUE_IDENTIFIER` |
 
-Code anchors:
+The same parser also requires an RSA public key and a 2048-bit modulus before the
+certificate can become witness input.
 
-- Constants: `OID_X509_UNIQUE_IDENTIFIER`, `OID_USERID`, `OID_OPENSSL_SUBJ_UNIQUE_IDENTIFIER` in `cert_parser.rs`
-- Lookup: `extract_rfc()` walks `cert.subject().iter_attributes()` and accepts those three OIDs
-- Errors: `CertParseError::RfcNotFound` if none match; `InvalidModulusBits` if not RSA-2048
+## Run the Rust fixture test
 
-## 3. Happy path A — integration test (recommended)
-
-Parses the committed (or regenerated) fixture and asserts the RFC + 64 modulus limbs:
+The existing test
+[`open/client-sdk/tests/openssl_fixture.rs`](../client-sdk/tests/openssl_fixture.rs)
+loads `sdk-ts/tests/fixtures/mock.der`, checks that the fixture subject contains
+`TESTRFC12345678901`, and calls `parse_sat_certificate`.
 
 ```bash
 cd open/client-sdk
 cargo test --test openssl_fixture
 ```
 
+A successful run proves the DER fixture can be parsed and that the accepted OID
+path produces the expected RFC string and 64 RSA modulus limbs.
+
+## Call `create_fortgate_witness`
+
+The public Rust helper lives in
+[`open/client-sdk/src/lib.rs`](../client-sdk/src/lib.rs):
+
+```rust
+let der = std::fs::read("../../sdk-ts/tests/fixtures/mock.der")?;
+let witness = fortgate_id::create_fortgate_witness(&der)?;
+println!("commitment = {}", witness.rfc_commitment);
+println!("nullifier = {}", witness.nullifier_hash);
+```
+
+For an in-repo smoke, the parser fixture test is the shortest happy path. If you
+add an example binary later, it should call the same `create_fortgate_witness`
+entrypoint after reading `sdk-ts/tests/fixtures/mock.der`.
+
+Expected successful witness outcome:
+
+- `rfc_commitment` is a 64-character hex string for the blinded RFC commitment.
+- `salt` is a generated 32-byte salt encoded as hex.
+- `nullifier_hash` is a 64-character hex string derived from the RFC and the
+  Fortgate nullifier domain.
+- `modulus_limbs` contains 64 little-endian `u32` limbs for the RSA-2048 modulus.
+- `exponent` is the certificate RSA public exponent.
+
+## TypeScript smoke path
+
+After building the WASM package, the same DER fixture is also used by the
+TypeScript smoke tests documented in [`sdk-ts/README.md`](../../sdk-ts/README.md):
+
+```bash
+cd sdk-ts
+npm run build:wasm
+npm test
+```
+
+Use the Rust fixture test first when you only need to confirm the DER and core
+witness path; use the TypeScript path when changing WASM or SDK packaging.
 Expected:
 
 ```

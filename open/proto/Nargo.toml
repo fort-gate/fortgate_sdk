@@ -2,8 +2,10 @@
 name = "fortgate_id_proto"
 type = "bin"
 authors = ["Fortgate ID Engineering"]
-compiler_version = ">=0.31.0"
+# Noir 0.32.0: es la versión mínima que exige `noir_rsa` (>=0.32.0).
+# El pin exacto que usa CI vive en `.github/workflows/ci.yml`; ver `README.md`.
+compiler_version = ">=0.32.0"
 
 [dependencies]
-std = { tag = "v0.31.0" }
-rsa = { git = "https://github.com/noir-lang/noir-rsa", tag = "v0.1.0" }
+# `std` es implícita en Noir: declararla como dependencia rompe el parseo de este manifiesto.
+noir_rsa = { git = "https://github.com/noir-lang/noir_rsa", tag = "v0.1" }

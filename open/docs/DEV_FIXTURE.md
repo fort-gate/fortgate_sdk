@@ -102,3 +102,85 @@ npm test
 
 Use the Rust fixture test first when you only need to confirm the DER and core
 witness path; use the TypeScript path when changing WASM or SDK packaging.
+Expected:
+
+```
+running 1 test
+test parse_mock_der_fixture ... ok
+```
+
+Test source: [`open/client-sdk/tests/openssl_fixture.rs`](../client-sdk/tests/openssl_fixture.rs)  
+Fixture path used by the test: `sdk-ts/tests/fixtures/mock.der` (via `include_bytes!`).
+
+## 4. Happy path B — call `create_fortgate_witness` yourself
+
+Public API in [`open/client-sdk/src/lib.rs`](../client-sdk/src/lib.rs):
+
+```rust
+// cargo test / bin / example that depends on fortgate-id-core
+let der = std::fs::read("sdk-ts/tests/fixtures/mock.der")?;
+// or: include_bytes!("../../sdk-ts/tests/fixtures/mock.der");
+
+let package = fortgate_id::create_fortgate_witness(&der)?;
+// package.rfc_commitment  — hex commitment
+// package.salt            — blinding salt
+// package.nullifier_hash  — nullifier
+// package.modulus_limbs   — 64 × u32 RSA limbs
+// package.exponent        — RSA public exponent
+// package.detected_tier   — hardware tier hint
+```
+
+Flow inside the crate:
+
+1. `parse_sat_certificate(cert_der)` → RFC + RSA limbs/exponent  
+2. `BlindedWitnessGenerator::generate_package(...)` → commitments  
+3. Return `BlindedWitnessPackage`
+
+### Minimal one-shot check (optional)
+
+From `open/client-sdk`, you can temporarily assert the full witness path in a local test (not required for merge of this doc):
+
+```rust
+let der = include_bytes!("../../../sdk-ts/tests/fixtures/mock.der");
+let pkg = fortgate_id::create_fortgate_witness(der).expect("witness");
+assert_eq!(pkg.modulus_limbs.len(), 64);
+assert!(!pkg.rfc_commitment.is_empty());
+```
+
+## 5. TypeScript / WASM smoke (optional)
+
+Same DER, after WASM build:
+
+```bash
+cd sdk-ts
+npm install
+npm run build:wasm   # needs wasm-pack
+npm test             # expects sdk-ts/tests/fixtures/mock.der
+```
+
+## Expected successful outcome
+
+| Step | Success signal |
+|------|----------------|
+| OpenSSL | `sdk-ts/tests/fixtures/mock.der` exists, ~800 bytes DER |
+| `cargo test --test openssl_fixture` | `parse_mock_der_fixture ... ok` |
+| `create_fortgate_witness` | `Ok(BlindedWitnessPackage)` with non-empty commitment/salt/nullifier and **64** modulus limbs |
+| Failure modes | Wrong key size → `InvalidAlgorithm` / `InvalidModulusBits`; subject without accepted OID → `RfcNotFound` |
+
+## One-liner sequence (copy-paste)
+
+```bash
+# from repo root
+mkdir -p sdk-ts/tests/fixtures
+openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/fg.key \
+  -out sdk-ts/tests/fixtures/mock.der -outform DER -days 365 \
+  -subj "/uniqueIdentifier=TESTRFC12345678901"
+cd open/client-sdk && cargo test --test openssl_fixture
+```
+
+## Related docs
+
+- [`CONTRIBUTING.md`](../../CONTRIBUTING.md) — fixture + core test setup  
+- [`sdk-ts/README.md`](../../sdk-ts/README.md) — OpenSSL command + OID notes  
+- [`open/client-sdk/tests/fixtures/README.md`](../client-sdk/tests/fixtures/README.md) — other DER fixtures (negative cases)  
+- [`AGENTS.md`](../../AGENTS.md) — crypto invariants (do not change without tests)

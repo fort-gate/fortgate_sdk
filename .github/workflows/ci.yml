@@ -43,33 +43,37 @@ jobs:
       - name: Build WASM and smoke test
         run: cd sdk-ts && npm install && npm run build:wasm && npm test
 
+  # Pin de Noir para TODOS los jobs Noir: 0.32.0.
+  # Es la versión mínima que exige `noir_rsa` v0.1 (`compiler_version = ">=0.32.0"`),
+  # la dependencia RSA de `open/proto`. Ver `open/proto/README.md`.
+  # Cada job instala su propia toolchain: los jobs no comparten runner ni PATH.
   noir-poseidon-check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install Noir 0.31 (noirup)
+      - name: Install Noir 0.32.0 (noirup)
         run: |
           curl -L https://raw.githubusercontent.com/noir-lang/noirup/main/install | bash
           echo "$HOME/.nargo/bin" >> "$GITHUB_PATH"
       - name: nargo test (proto-poseidon-check)
         run: |
           export PATH="$HOME/.nargo/bin:$PATH"
-          noirup --version 0.31.0
+          noirup --version 0.32.0
           cd open/proto-poseidon-check && nargo test
 
-  noir-proto-legacy:
+  noir-proto-check:
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
-      - name: Nargo check open/proto (formato legacy; opcional)
+      - name: Install Noir 0.32.0 (noirup)
         run: |
-          if command -v nargo >/dev/null 2>&1; then
-            cd open/proto && nargo check || true
-          else
-            echo "nargo not in PATH"
-            exit 0
-          fi
+          curl -L https://raw.githubusercontent.com/noir-lang/noirup/main/install | bash
+          echo "$HOME/.nargo/bin" >> "$GITHUB_PATH"
+      - name: nargo check (open/proto)
+        run: |
+          export PATH="$HOME/.nargo/bin:$PATH"
+          noirup --version 0.32.0
+          cd open/proto && nargo check
 
   uniffi-bindgen-smoke:
     runs-on: ubuntu-latest

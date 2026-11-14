@@ -5,6 +5,6 @@
 **/artifacts/
 **/cache/
 **/out/
-.env
 *.log
 
+config.bat

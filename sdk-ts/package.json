@@ -5,7 +5,7 @@
   "main": "tests/smoke_test.js",
   "scripts": {
     "test": "node tests/smoke_test.js",
-    "build:wasm": "node init && wasm-pack build ../open/client-sdk --target nodejs --out-dir ../../sdk-ts/pkg"
+    "build:wasm": "wasm-pack build ../open/client-sdk --target nodejs --out-dir ../../sdk-ts/pkg"
   },
   "dependencies": {
     "ffi-napi": "^4.0.3"
